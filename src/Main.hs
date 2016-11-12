@@ -12,6 +12,8 @@ import Data.List
 import qualified Codec.Picture.Types as M
 import Wavefront
 
+type Point = (Int, Int)
+
 main :: IO ()
 main = do
   lines <- getLinesFromFile width height
@@ -19,7 +21,7 @@ main = do
   where
     (width, height) = (1000, 1000)
 
-getLinesFromFile :: Int -> Int -> IO [[(Int, Int)]]
+getLinesFromFile :: Int -> Int -> IO [[Point]]
 getLinesFromFile width height = do
   wavefrontFile <- readWavefrontFile "input.txt"
   let faces' = faces wavefrontFile
@@ -49,7 +51,7 @@ originalFunc :: Int -> Int -> PixelRGB8
 originalFunc 60 75 = PixelRGB8 0 0 0
 originalFunc _ _ = PixelRGB8 255 255 255
 
-getPoints :: Int -> Int -> Int -> Int -> [(Int, Int)]
+getPoints :: Int -> Int -> Int -> Int -> [Point]
 getPoints x0 y0 x1 y1 
   | x0 > x1 = getPoints x1 y1 x0 y0
   | otherwise = [if steep then (y, x) else (x, y) | 
@@ -61,7 +63,7 @@ getPoints x0 y0 x1 y1
         swap tuple@(x, x', y, y') = if x > x' then (x', x, y', y) else tuple
         
 
-createImage :: Int -> Int -> [[(Int, Int)]] -> Image PixelRGB8
+createImage :: Int -> Int -> [[Point]] -> Image PixelRGB8
 createImage width height lines = runST $ do
   mimg <- M.createMutableImage width height (PixelRGB8 0 0 0)
   mapM (drawLine mimg) lines
