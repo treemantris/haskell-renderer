@@ -58,11 +58,18 @@ parseWavefrontFile' (row: rows) vertices faces
   where
     firstChars = take 2 row
     rest = drop 2 row
-    (index1, index2, index3) = parseFaceIndexes rest
+    newVertex = parseVertex rest
+    newFace = parseFace rest vertices
+
+parseVertex :: String -> Vertex
+parseVertex vertexString = Vertex v1 v2 v3
+  where [v1, v2, v3] = map read $ words vertexString
+
+parseFace :: String -> [Vertex] -> Face
+parseFace faceString vertices = Face vertex1 vertex2 vertex3
+  where
+    (index1, index2, index3) = parseFaceIndexes faceString
     (vertex1, vertex2, vertex3) = (vertices !! index1, vertices !! index2, vertices !! index3)
-    newFace = Face vertex1 vertex2 vertex3
-    [v1, v2, v3] = map read $ words rest
-    newVertex = Vertex v1 v2 v3
 
 parseFaceIndexes :: String -> (Int, Int, Int)
 parseFaceIndexes faceRow = (index1 - 1, index2 - 1, index3 -1)
