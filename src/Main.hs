@@ -14,14 +14,20 @@ import Wavefront
 
 main :: IO ()
 main = do
+  lines <- getLinesFromFile width height
+  createAndSaveImage width height lines
+  where
+    (width, height) = (1000, 1000)
+
+getLinesFromFile :: Int -> Int -> IO [[(Int, Int)]]
+getLinesFromFile width height = do
   wavefrontFile <- readWavefrontFile "input.txt"
   let faces' = faces wavefrontFile
   let points' = facesToPoints faces'
   let scaledPoints' = map (\(x0, y0, x1, y1) -> (scalex x0, scaley y0, scalex x1, scaley y1)) points'
   let lines = map (\(x0, y0, x1, y1) -> invertedGetPoints x0 y0 x1 y1) scaledPoints'
-  createAndSaveImage width height lines
-  where 
-    (width, height) = (1000, 1000)
+  return lines
+  where
     scalex x = round $ (fromIntegral width - 1) * (x + 1) * 0.5
     scaley y = round $ (fromIntegral height - 1) * (y + 1) * 0.5
     invert y = height - y - 1
