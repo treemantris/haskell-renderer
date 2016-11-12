@@ -17,8 +17,10 @@ data WavefrontFile = WavefrontFile { vertices :: [Vertex], faces :: [Face] } der
 
 main :: IO ()
 main = do
-  faces <- readWavefrontFile "input.txt"
-  let points' = facesToPoints faces
+  wavefrontFile <- readWavefrontFile' "input.txt"
+  -- faces <- readWavefrontFile "input.txt"
+  let faces' = faces wavefrontFile
+  let points' = facesToPoints faces'
   let scaledPoints' = map (\(x0, y0, x1, y1) -> (scalex x0, scaley y0, scalex x1, scaley y1)) points'
   let lines = map (\(x0, y0, x1, y1) -> invertedGetPoints x0 y0 x1 y1) scaledPoints'
   createAndSaveImage' width height lines
@@ -48,13 +50,30 @@ readWavefrontFile filePath = do
   let (faces, afterFaces) = parseFaces vertices afterVertices
   return faces
 
--- readWavefrontFile' :: String -> IO WavefrontFile
--- readWavefrontFile' filePath = do
-  -- fileContents <- readFile filePath
-  -- let rows = lines fileContents
-  -- let (vertices, afterVertices) = parseVertices rows
-  -- let (faces, afterFaces) = parseFaces vertices afterVertices
-  -- return faces
+readWavefrontFile' :: String -> IO WavefrontFile
+readWavefrontFile' filePath = do
+  fileContents <- readFile filePath
+  let rows = lines fileContents
+  let wavefrontFile = parseWavefrontFile rows
+  return wavefrontFile
+
+parseWavefrontFile :: [String] -> WavefrontFile
+parseWavefrontFile rows = parseWavefrontFile' rows [] []
+
+parseWavefrontFile' :: [String] -> [Vertex] -> [Face] -> WavefrontFile
+parseWavefrontFile' [] vertices faces = WavefrontFile vertices faces
+parseWavefrontFile' (row: rows) vertices faces
+  | firstChars == "f " = parseWavefrontFile' rows vertices (newFace:faces)
+  | firstChars == "v " = parseWavefrontFile' rows (vertices ++ [newVertex]) faces
+  | otherwise = parseWavefrontFile' rows vertices faces
+  where
+    firstChars = take 2 row
+    rest = drop 2 row
+    (index1, index2, index3) = parseFaceIndexes rest
+    (vertex1, vertex2, vertex3) = (vertices !! index1, vertices !! index2, vertices !! index3)
+    newFace = Face vertex1 vertex2 vertex3
+    [v1, v2, v3] = map read $ words rest
+    newVertex = Vertex v1 v2 v3
 
 parseFaces :: [Vertex] -> [String] -> ([Face], [String])
 parseFaces vertices rows = parseFaces' [] vertices rows
@@ -72,7 +91,6 @@ parseFaces' faces vertices rows
     (vertex1, vertex2, vertex3) = (vertices !! index1, vertices !! index2, vertices !! index3)
     newFace = Face vertex1 vertex2 vertex3
   
-
 parseFaceIndexes :: String -> (Int, Int, Int)
 parseFaceIndexes faceRow = (index1 - 1, index2 - 1, index3 -1)
   where 
