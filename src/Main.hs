@@ -16,10 +16,28 @@ type Point = (Int, Int)
 
 main :: IO ()
 main = do
-  lines <- getLinesFromFile width height
-  createAndSaveImage width height lines
+  let triangle = drawTriangle (10, 70) (50, 160) (70, 80)
+  -- lines <- getLinesFromFile width height
+  createAndSaveImage width height [triangle]
   where
     (width, height) = (1000, 1000)
+
+drawTriangle :: Point -> Point -> Point -> [Point]
+drawTriangle a b c = line1 ++ line2 ++ line3 ++ fillingLines
+  where
+    line1 = getPoints' a b
+    line2 = getPoints' b c
+    line3 = getPoints' c a
+    (shortLine, longLine) = if (length1 < length2) then (line1, line2) else (line2, line1)
+    length1 = lengthOfLine a b
+    length2 = lengthOfLine b c
+    fillingLines = foldl1 (++) [getPoints' l s | l <- longLine, s <- shortLine]
+
+lengthOfLine :: Point -> Point -> Double
+lengthOfLine (x0, y0) (x1, y1) = sqrt $ fromIntegral (x1 - x0) ^ 2 + fromIntegral (y1 - y0) ^ 2
+
+getPoints' :: Point -> Point -> [Point]
+getPoints' (x0, y0) (x1, y1) = getPoints x0 y0 x1 y1
 
 getLinesFromFile :: Int -> Int -> IO [[Point]]
 getLinesFromFile width height = do
