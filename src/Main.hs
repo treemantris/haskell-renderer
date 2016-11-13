@@ -28,10 +28,11 @@ drawTriangle a b c = line1 ++ line2 ++ line3 ++ fillingLines
     line1 = getPoints' a b
     line2 = getPoints' b c
     line3 = getPoints' c a
-    (shortLine, longLine) = if (length1 < length2) then (line1, line2) else (line2, line1)
+    (shortLine, shortLength, longLine, longLength) = if (length1 < length2) then (line1, length1, line2, length2) else (line2, length2, line1, length1)
     length1 = lengthOfLine a b
     length2 = lengthOfLine b c
-    fillingLines = foldl1 (++) [getPoints' l s | l <- longLine, s <- shortLine]
+    -- fillingLines = foldl1 (++) [getPoints' l s | l <- longLine, let t = fromIntegral l / longLength, let s = round $ t * shortLength ]
+    fillingLines = foldl1 (++) [getPoints' l s | index <- [0..(length longLine - 1)], let l = longLine !! index, let t = fromIntegral index / longLength, let index2 = round $ t * (fromIntegral . length) shortLine, let s = shortLine !! index2]
 
 lengthOfLine :: Point -> Point -> Double
 lengthOfLine (x0, y0) (x1, y1) = sqrt $ fromIntegral (x1 - x0) ^ 2 + fromIntegral (y1 - y0) ^ 2
