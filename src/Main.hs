@@ -16,7 +16,7 @@ type Point = (Int, Int)
 
 main :: IO ()
 main = do
-  let triangle = drawTriangle (10, 70) (50, 160) (70, 80)
+  let triangle = drawTriangle' (10, 70) (50, 160) (70, 80)
   -- lines <- getLinesFromFile width height
   createAndSaveImage width height [triangle]
   where
@@ -33,6 +33,18 @@ drawTriangle a b c = line1 ++ line2 ++ line3 ++ fillingLines
     length2 = lengthOfLine b c
     -- fillingLines = foldl1 (++) [getPoints' l s | l <- longLine, let t = fromIntegral l / longLength, let s = round $ t * shortLength ]
     fillingLines = foldl1 (++) [getPoints' l s | index <- [0..(length longLine - 1)], let l = longLine !! index, let t = fromIntegral index / longLength, let index2 = round $ t * (fromIntegral . length) shortLine, let s = shortLine !! index2]
+
+drawTriangle' :: Point -> Point -> Point -> [Point]
+drawTriangle' a@(x0, y0) b@(x1, y1) c@(x2, y2) 
+  | y0 > y1 = drawTriangle' b a c
+  | y2 < y0 = drawTriangle' c a b
+  | y2 < y1 = drawTriangle' a c b
+  | otherwise = firstSegment ++ lastSegment
+  where
+    firstSegment = foldl1 (++) [ getPoints startX y endX y | y <- [y0..y1], let t = (fromIntegral $ y - y0) / (fromIntegral $ y1 - y0), let startX = x0 + round (t * (fromIntegral $ x1 - x0)), let endX = x0 + round ((fromIntegral $ y - y0) / (fromIntegral $ (y2 - y0)) * (fromIntegral $ x2 - x0)) ] 
+    lastSegment = foldl1 (++) [ getPoints startX y endX y | y <- [y1..y2], let t = (fromIntegral $ y - y1) / (fromIntegral $ y2 - y1), let startX = x1 + round (t * (fromIntegral $ x2 - x1)), let endX = x0 + round ((((fromIntegral $ y - y0) / (fromIntegral $ y2 - y0))) * (fromIntegral $ x2 - x0))]
+    -- firstSegment = foldl1 (++) [ getPoints startX y endX y | y <- [y0..y1], let t = (fromIntegral $ y - y0) / (fromIntegral $ y1 - y0), let startX = x0 + round (t * (fromIntegral $ x1 - x0)), let endX = x0 + round (t * (fromIntegral $ x2 - x0)) ] 
+    -- lastSegment = foldl1 (++) [ getPoints startX y endX y | y <- [y1..y2], let t = (fromIntegral $ y - y1) / (fromIntegral $ y2 - y1), let startX = x1 + round (t * (fromIntegral $ x2 - x1)), let endX = x0 + round (((fromIntegral $ y - y0) / (fromIntegral $ y2 - y0))) * (fromIntegral $ x2 - x0)]
 
 lengthOfLine :: Point -> Point -> Double
 lengthOfLine (x0, y0) (x1, y1) = sqrt $ fromIntegral (x1 - x0) ^ 2 + fromIntegral (y1 - y0) ^ 2
