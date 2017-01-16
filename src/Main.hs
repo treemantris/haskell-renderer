@@ -41,10 +41,10 @@ drawTriangle' a@(x0, y0) b@(x1, y1) c@(x2, y2)
   | y2 < y1 = drawTriangle' a c b
   | otherwise = firstSegment ++ lastSegment
   where
-    firstSegment = foldl1 (++) [ getPoints startX y endX y | y <- [y0..y1], let t = (fromIntegral $ y - y0) / (fromIntegral $ y1 - y0), let startX = x0 + round (t * (fromIntegral $ x1 - x0)), let endX = x0 + round ((fromIntegral $ y - y0) / (fromIntegral $ (y2 - y0)) * (fromIntegral $ x2 - x0)) ] 
+    firstSegment = foldl1 (++) [ getPoints startX y endX y | y <- [y0..y1], let t = (fromIntegral $ y - y0) / segmentHeight, let startX = x0 + round (t * (fromIntegral $ x1 - x0)), let endX = x0 + round ((fromIntegral $ y - y0) / totalHeight * (fromIntegral $ x2 - x0)) ] 
     lastSegment = foldl1 (++) [ getPoints startX y endX y | y <- [y1..y2], let t = (fromIntegral $ y - y1) / (fromIntegral $ y2 - y1), let startX = x1 + round (t * (fromIntegral $ x2 - x1)), let endX = x0 + round ((((fromIntegral $ y - y0) / (fromIntegral $ y2 - y0))) * (fromIntegral $ x2 - x0))]
-    -- firstSegment = foldl1 (++) [ [(startX, y), (endX, y)] | y <- [y0..y1], let t = (fromIntegral $ y - y0) / (fromIntegral $ y1 - y0), let startX = x0 + round (t * (fromIntegral $ x1 - x0)), let endX = x0 + round ((fromIntegral $ y - y0) / (fromIntegral $ (y2 - y0)) * (fromIntegral $ x2 - x0)) ] 
-    -- lastSegment = foldl1 (++) [ [(startX, y), (endX, y)] | y <- [y1..y2], let t = (fromIntegral $ y - y1) / (fromIntegral $ y2 - y1), let startX = x1 + round (t * (fromIntegral $ x2 - x1)), let endX = x0 + round ((((fromIntegral $ y - y0) / (fromIntegral $ y2 - y0))) * (fromIntegral $ x2 - x0))]
+    segmentHeight = fromIntegral $ y1 - y0
+    totalHeight = fromIntegral $ y2 - y0
 
 lengthOfLine :: Point -> Point -> Double
 lengthOfLine (x0, y0) (x1, y1) = sqrt $ fromIntegral (x1 - x0) ^ 2 + fromIntegral (y1 - y0) ^ 2
