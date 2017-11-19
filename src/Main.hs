@@ -13,12 +13,17 @@ import qualified Codec.Picture.Types as M
 import Wavefront
 
 type Point = (Int, Int)
+type Vector = (Int, Int, Int)
+type DoubleVector = (Double, Double, Double)
+type Triangle = (Point, Point, Point)
 
 main :: IO ()
 main = do
-  let triangle = drawTriangle' (10, 70) (50, 160) (70, 80)
+  let triangleOld = drawTriangle' (10, 70) (50, 160) (70, 80)
+  let triangleNew = drawTriangle'' (110, 70) (150, 160) (170, 80)
+  createAndSaveImage width height [triangleOld, triangleNew]
   -- lines <- getLinesFromFile width height
-  createAndSaveImage width height [triangle]
+--   createAndSaveImage width height lines
   where
     (width, height) = (1000, 1000)
 
@@ -56,10 +61,13 @@ getLinesFromFile :: Int -> Int -> IO [[Point]]
 getLinesFromFile width height = do
   wavefrontFile <- readWavefrontFile "input.txt"
   let faces' = faces wavefrontFile
-  let points' = facesToPoints faces'
-  let scaledPoints' = map (\(x0, y0, x1, y1) -> (scalex x0, scaley y0, scalex x1, scaley y1)) points'
-  let lines = map (\(x0, y0, x1, y1) -> invertedGetPoints x0 y0 x1 y1) scaledPoints'
-  return lines
+  let triangles = facesToTriangles width height faces'
+  let drawedTriangles = map (\(p1, p2, p3) -> drawTriangle'' p1 p2 p3) triangles
+  -- let points' = facesToPoints faces'
+  -- let scaledPoints' = map (\(x0, y0, x1, y1) -> (scalex x0, scaley y0, scalex x1, scaley y1)) points'
+  -- let lines = map (\(x0, y0, x1, y1) -> invertedGetPoints x0 y0 x1 y1) scaledPoints'
+  -- return lines
+  return drawedTriangles
   where
     scalex x = round $ (fromIntegral width - 1) * (x + 1) * 0.5
     scaley y = round $ (fromIntegral height - 1) * (y + 1) * 0.5
@@ -68,6 +76,14 @@ getLinesFromFile width height = do
     points = invertedGetPoints 1 1 200 200
 
 createAndSaveImage width height lines = (savePngImage "output.png" . ImageRGB8) (createImage width height lines)
+
+facesToTriangles :: Int -> Int -> [Face] -> [(Point, Point, Point)]
+facesToTriangles width height faces = map faceToTriangle faces
+  where
+    faceToTriangle face = (vertexToPoint . vertex1 $ face, vertexToPoint . vertex2 $ face, vertexToPoint . vertex3 $ face)
+    vertexToPoint vertex = (scaledX vertex, scaledY vertex)
+    scaledX vertex = round $ (fromIntegral width - 1) * ((x vertex) + 1) * 0.5
+    scaledY vertex = height - 1 - (round $ (fromIntegral height - 1) * ((y vertex) + 1) * 0.5) -- inverting as well
 
 facesToPoints :: [Face] -> [(Double, Double, Double, Double)]
 facesToPoints faces = concatMap faceToPoints faces
@@ -98,7 +114,36 @@ getPoints x0 y0 x1 y1
 createImage :: Int -> Int -> [[Point]] -> Image PixelRGB8
 createImage width height lines = runST $ do
   mimg <- M.createMutableImage width height (PixelRGB8 0 0 0)
-  mapM (drawLine mimg) lines
+  mapM_ (drawLine mimg) lines
   M.unsafeFreezeImage mimg
 
 drawLine mimg points = mapM_ (\(x, y) -> writePixel mimg x y (PixelRGB8 255 255 255)) points
+
+crossProduct :: Vector -> Vector -> Vector
+crossProduct (ai, aj, ak) (bi, bj, bk) =
+  (aj * bk - ak * bj, ak * bi - ai * bk, ai * bj - aj * bi)
+
+drawTriangle'' :: Point -> Point -> Point -> [Point]
+drawTriangle'' a@(x0, y0) b@(x1, y1) c@(x2, y2)  =
+  [(x, y) | (x, y) <- (bbox a b c), inTriangle (x, y) (a, b, c)]
+
+bbox :: Point -> Point -> Point -> [Point]
+bbox (ax, ay) (bx, by) (cx, cy) = [(x, y) | x <- [minX..maxX], y <- [minY..maxY]]
+  where 
+    minX = min ax $ min bx cx
+    maxX = max ax $ max bx cx
+    minY = min ay $ min by cy
+    maxY = max ay $ max by cy
+
+inTriangle :: Point -> Triangle -> Bool
+inTriangle p t =
+  u >= 0 && v >= 0 && w >= 0
+  where
+    (u, v, w) = baryCentric p t
+  
+baryCentric :: Point -> Triangle -> DoubleVector
+baryCentric (px, py) (a@(ax, ay), b@(bx, by), c@(cx, cy)) =
+  (u, v, w)
+  where
+    (uk, vk, k) = crossProduct (cy - ay, by - ay, ay - py) (cx - ax, bx - ax, ax - px)
+    (u, v, w) = (fromIntegral uk / fromIntegral k , fromIntegral vk / fromIntegral k , (1 - u - v))
