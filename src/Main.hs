@@ -9,9 +9,13 @@ import Control.Monad.ST
 import System.Environment (getArgs)
 import System.FilePath (replaceExtension)
 import Data.List
+import Data.Word
 import qualified Codec.Picture.Types as M
 import Wavefront
+import System.Random
 
+type Colour = (Word8, Word8, Word8)
+type ColouredPoint = (Point, Colour)
 type Point = (Int, Int)
 type Vector = (Int, Int, Int)
 type DoubleVector = (Double, Double, Double)
@@ -21,7 +25,8 @@ main :: IO ()
 main = do
   let triangleOld = drawTriangle' (10, 70) (50, 160) (70, 80)
   let triangleNew = drawTriangle'' (110, 70) (150, 160) (170, 80)
-  createAndSaveImage width height [triangleOld, triangleNew]
+  createAndSaveImage width height [triangleNew]
+  -- createAndSaveImage width height [triangleOld, triangleNew]
   -- lines <- getLinesFromFile width height
 --   createAndSaveImage width height lines
   where
@@ -57,7 +62,7 @@ lengthOfLine (x0, y0) (x1, y1) = sqrt $ fromIntegral (x1 - x0) ^ 2 + fromIntegra
 getPoints' :: Point -> Point -> [Point]
 getPoints' (x0, y0) (x1, y1) = getPoints x0 y0 x1 y1
 
-getLinesFromFile :: Int -> Int -> IO [[Point]]
+getLinesFromFile :: Int -> Int -> IO [[ColouredPoint]]
 getLinesFromFile width height = do
   wavefrontFile <- readWavefrontFile "input.txt"
   let faces' = faces wavefrontFile
@@ -111,21 +116,23 @@ getPoints x0 y0 x1 y1
         swap tuple@(x, x', y, y') = if x > x' then (x', x, y', y) else tuple
         
 
-createImage :: Int -> Int -> [[Point]] -> Image PixelRGB8
+createImage :: Int -> Int -> [[ColouredPoint]] -> Image PixelRGB8
 createImage width height lines = runST $ do
   mimg <- M.createMutableImage width height (PixelRGB8 0 0 0)
   mapM_ (drawLine mimg) lines
   M.unsafeFreezeImage mimg
 
-drawLine mimg points = mapM_ (\(x, y) -> writePixel mimg x y (PixelRGB8 255 255 255)) points
+drawLine mimg pixels = mapM_ (\((x, y), (r, g, b)) -> writePixel mimg x y (PixelRGB8 r g b)) pixels
 
 crossProduct :: Vector -> Vector -> Vector
 crossProduct (ai, aj, ak) (bi, bj, bk) =
   (aj * bk - ak * bj, ak * bi - ai * bk, ai * bj - aj * bi)
 
-drawTriangle'' :: Point -> Point -> Point -> [Point]
+drawTriangle'' :: Point -> Point -> Point -> [ColouredPoint]
 drawTriangle'' a@(x0, y0) b@(x1, y1) c@(x2, y2)  =
-  [(x, y) | (x, y) <- (bbox a b c), inTriangle (x, y) (a, b, c)]
+  [((x, y), (255, 255, 255)) | (x, y) <- (bbox a b c), inTriangle (x, y) (a, b, c)]
+  where
+    (r1, g) = next StdGen
 
 bbox :: Point -> Point -> Point -> [Point]
 bbox (ax, ay) (bx, by) (cx, cy) = [(x, y) | x <- [minX..maxX], y <- [minY..maxY]]
