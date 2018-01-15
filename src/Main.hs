@@ -9,6 +9,7 @@ import Control.Monad.ST
 import System.Environment (getArgs)
 import System.FilePath (replaceExtension)
 import Data.List
+import Data.List.Split
 import Data.Word
 import qualified Codec.Picture.Types as M
 import Wavefront
@@ -130,9 +131,11 @@ crossProduct (ai, aj, ak) (bi, bj, bk) =
 
 drawTriangle'' :: Point -> Point -> Point -> [ColouredPoint]
 drawTriangle'' a@(x0, y0) b@(x1, y1) c@(x2, y2)  =
-  [((x, y), (255, 255, 255)) | (x, y) <- (bbox a b c), inTriangle (x, y) (a, b, c)]
+  zip [(x, y) | (x, y) <- (bbox a b c), inTriangle (x, y) (a, b, c)] randomColours
   where
-    (r1, g) = next StdGen
+    f = mkStdGen $ x0 + y0 + x1 + y1 + x2 + y2
+    r = randoms f
+    randomColours = [(r, g, b) | [r, g, b] <- chunksOf 3 r]
 
 bbox :: Point -> Point -> Point -> [Point]
 bbox (ax, ay) (bx, by) (cx, cy) = [(x, y) | x <- [minX..maxX], y <- [minY..maxY]]
