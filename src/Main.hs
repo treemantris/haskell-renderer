@@ -130,12 +130,12 @@ crossProduct (ai, aj, ak) (bi, bj, bk) =
   (aj * bk - ak * bj, ak * bi - ai * bk, ai * bj - aj * bi)
 
 drawTriangle'' :: Point -> Point -> Point -> [ColouredPoint]
-drawTriangle'' a@(x0, y0) b@(x1, y1) c@(x2, y2)  =
-  zip [(x, y) | (x, y) <- (bbox a b c), inTriangle (x, y) (a, b, c)] randomColours
+drawTriangle'' a@(x0, y0) b@(x1, y1) c@(x2, y2) =
+  [((x, y), colour) | (x, y) <- (bbox a b c), inTriangle (x, y) (a, b, c)] 
   where
     f = mkStdGen $ x0 + y0 + x1 + y1 + x2 + y2
-    r = randoms f
-    randomColours = [(r, g, b) | [r, g, b] <- chunksOf 3 r]
+    [red, green, blue] = take 3 $ randoms f
+    colour = (red, green, blue)
 
 bbox :: Point -> Point -> Point -> [Point]
 bbox (ax, ay) (bx, by) (cx, cy) = [(x, y) | x <- [minX..maxX], y <- [minY..maxY]]
