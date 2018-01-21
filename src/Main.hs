@@ -19,17 +19,17 @@ type Colour = (Word8, Word8, Word8)
 type ColouredPoint = (Point, Colour)
 type Point = (Int, Int)
 type Vector = (Int, Int, Int)
-type DoubleVector = (Double, Double, Double)
+type VectorD = (Double, Double, Double)
 type Triangle = (Point, Point, Point)
 
 main :: IO ()
 main = do
-  let triangleOld = drawTriangle' (10, 70) (50, 160) (70, 80)
-  let triangleNew = drawTriangle'' (110, 70) (150, 160) (170, 80)
-  createAndSaveImage width height [triangleNew]
+  -- let triangleOld = drawTriangle' (10, 70) (50, 160) (70, 80)
+  -- let triangleNew = drawTriangle'' (110, 70) (150, 160) (170, 80)
+  -- createAndSaveImage width height [triangleNew]
   -- createAndSaveImage width height [triangleOld, triangleNew]
-  -- lines <- getLinesFromFile width height
---   createAndSaveImage width height lines
+  lines <- getLinesFromFile width height
+  createAndSaveImage width height lines
   where
     (width, height) = (1000, 1000)
 
@@ -63,12 +63,14 @@ lengthOfLine (x0, y0) (x1, y1) = sqrt $ fromIntegral (x1 - x0) ^ 2 + fromIntegra
 getPoints' :: Point -> Point -> [Point]
 getPoints' (x0, y0) (x1, y1) = getPoints x0 y0 x1 y1
 
-getLinesFromFile :: Int -> Int -> IO [[ColouredPoint]]
+getLinesFromFile :: Int -> Int -> IO [[ColouredPoint]] -- move some of the lets into where?, use monad bind?
 getLinesFromFile width height = do
   wavefrontFile <- readWavefrontFile "input.txt"
   let faces' = faces wavefrontFile
+  let intensities = map getIntensity faces'
   let triangles = facesToTriangles width height faces'
-  let drawedTriangles = map (\(p1, p2, p3) -> drawTriangle'' p1 p2 p3) triangles
+  let zipped = zip triangles intensities
+  let drawedTriangles = map (\(t, i) -> drawTriangle'' t i ) zipped
   -- let points' = facesToPoints faces'
   -- let scaledPoints' = map (\(x0, y0, x1, y1) -> (scalex x0, scaley y0, scalex x1, scaley y1)) points'
   -- let lines = map (\(x0, y0, x1, y1) -> invertedGetPoints x0 y0 x1 y1) scaledPoints'
@@ -86,7 +88,7 @@ createAndSaveImage width height lines = (savePngImage "output.png" . ImageRGB8) 
 facesToTriangles :: Int -> Int -> [Face] -> [(Point, Point, Point)]
 facesToTriangles width height faces = map faceToTriangle faces
   where
-    faceToTriangle face = (vertexToPoint . vertex1 $ face, vertexToPoint . vertex2 $ face, vertexToPoint . vertex3 $ face)
+    faceToTriangle (vertex1, vertex2, vertex3)  = (vertexToPoint vertex1, vertexToPoint vertex2, vertexToPoint vertex3)
     vertexToPoint vertex = (scaledX vertex, scaledY vertex)
     scaledX vertex = round $ (fromIntegral width - 1) * ((x vertex) + 1) * 0.5
     scaledY vertex = height - 1 - (round $ (fromIntegral height - 1) * ((y vertex) + 1) * 0.5) -- inverting as well
@@ -94,7 +96,7 @@ facesToTriangles width height faces = map faceToTriangle faces
 facesToPoints :: [Face] -> [(Double, Double, Double, Double)]
 facesToPoints faces = concatMap faceToPoints faces
   where
-    faceToPoints face = [vertexToVertex (vertex1 face) (vertex2 face), vertexToVertex (vertex2 face) (vertex3 face), vertexToVertex (vertex3 face) (vertex1 face)]
+    faceToPoints (vertex1, vertex2, vertex3) = [vertexToVertex vertex1 vertex2, vertexToVertex vertex2 vertex3, vertexToVertex vertex3 vertex1]
     vertexToVertex v1 v2 = (x v1, y v1, x v2, y v2)
 
 generateImg :: (Int -> Int -> PixelRGB8) -> DynamicImage
@@ -129,13 +131,41 @@ crossProduct :: Vector -> Vector -> Vector
 crossProduct (ai, aj, ak) (bi, bj, bk) =
   (aj * bk - ak * bj, ak * bi - ai * bk, ai * bj - aj * bi)
 
-drawTriangle'' :: Point -> Point -> Point -> [ColouredPoint]
-drawTriangle'' a@(x0, y0) b@(x1, y1) c@(x2, y2) =
+crossProductD :: VectorD -> VectorD -> VectorD
+crossProductD (ai, aj, ak) (bi, bj, bk) =
+  (aj * bk - ak * bj, ak * bi - ai * bk, ai * bj - aj * bi)
+
+dotProduct :: VectorD -> VectorD -> Double
+dotProduct (ai, aj, ak) (bi, bj, bk) =
+  ai * bi + aj * bj + ak * bk
+
+normalise :: VectorD -> VectorD
+normalise (a, b, c) = (a / mag, b / mag, c / mag)
+  where
+    -- mag = fromIntegral (sqrt ( a ^ 2 + b ^ 2 + c ^ 2)) -- wtf?
+    mag = sqrt ( a ^ 2 + b ^ 2 + c ^ 2)
+  
+vertexSubtract :: Vertex -> Vertex -> VectorD
+vertexSubtract a b =
+  ((x a) - (x b), (y a) - (y b), (z a)  - (z b))
+
+getIntensity :: Face -> Word8
+getIntensity (a, b, c) = 
+  round (255 * (dotProduct lightDirection normal))
+  where
+    ab = vertexSubtract b a 
+    ac = vertexSubtract c a 
+    bigNormal = crossProductD ab ac
+    normal = normalise bigNormal
+    lightDirection = (0, 0, -1)
+
+drawTriangle'' :: Triangle -> Word8 ->  [ColouredPoint]
+drawTriangle'' (a@(x0, y0), b@(x1, y1),  c@(x2, y2)) intensity  =
   [((x, y), colour) | (x, y) <- (bbox a b c), inTriangle (x, y) (a, b, c)] 
   where
-    f = mkStdGen $ x0 + y0 + x1 + y1 + x2 + y2
-    [red, green, blue] = take 3 $ randoms f
-    colour = (red, green, blue)
+    -- f = mkStdGen $ x0 + y0 + x1 + y1 + x2 + y2
+    -- [red, green, blue] = take 3 $ randoms f
+    colour = (intensity , intensity , intensity )
 
 bbox :: Point -> Point -> Point -> [Point]
 bbox (ax, ay) (bx, by) (cx, cy) = [(x, y) | x <- [minX..maxX], y <- [minY..maxY]]
@@ -150,8 +180,8 @@ inTriangle p t =
   u >= 0 && v >= 0 && w >= 0
   where
     (u, v, w) = baryCentric p t
-  
-baryCentric :: Point -> Triangle -> DoubleVector
+
+baryCentric :: Point -> Triangle -> VectorD
 baryCentric (px, py) (a@(ax, ay), b@(bx, by), c@(cx, cy)) =
   (u, v, w)
   where

@@ -1,7 +1,8 @@
-module Wavefront(x, y, z, vertex1, vertex2, vertex3, vertices, faces, Vertex, Face, WavefrontFile, readWavefrontFile) where
+module Wavefront(x, y, z, vertices, faces, Vertex, Face, WavefrontFile, readWavefrontFile) where
 
 data Vertex = Vertex { x :: Double, y :: Double, z :: Double} deriving Show
-data Face = Face { vertex1 :: Vertex, vertex2 :: Vertex, vertex3 :: Vertex } deriving Show
+-- data Face = Face { vertex1 :: Vertex, vertex2 :: Vertex, vertex3 :: Vertex } deriving Show
+type Face = (Vertex, Vertex, Vertex)
 data WavefrontFile = WavefrontFile { vertices :: [Vertex], faces :: [Face] } deriving Show
 
 readWavefrontFile :: String -> IO WavefrontFile
@@ -31,7 +32,7 @@ parseVertex vertexString = Vertex v1 v2 v3
   where [v1, v2, v3] = map read $ words vertexString
 
 parseFace :: String -> [Vertex] -> Face
-parseFace faceString vertices = Face vertex1 vertex2 vertex3
+parseFace faceString vertices = (vertex1, vertex2, vertex3)
   where
     (index1, index2, index3) = parseFaceIndexes faceString
     (vertex1, vertex2, vertex3) = (vertices !! index1, vertices !! index2, vertices !! index3)
